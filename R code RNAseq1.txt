@@ -15,7 +15,6 @@ if (!requireNamespace("BiocManager", quietly = TRUE))
   install.packages("BiocManager")
 BiocManager::install("DESeq2", version = "3.8")
 
-data("mtcars")
 write.table(all_hisat_counts, file = "D:/RNAseq/test_out.txt", sep = "\t",
             row.names = TRUE, col.names = NA)
 
