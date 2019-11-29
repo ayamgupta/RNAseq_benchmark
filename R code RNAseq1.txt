@@ -1,0 +1,54 @@
+library("magrittr")
+all_hisat_counts <- read.table("D:/RNAseq/all_bowtie_ensembl.txt", header = TRUE)
+row.names(all_hisat_counts) <- all_hisat_counts$Geneid
+all_hisat_counts <- all_hisat_counts[ , -c(1:6)]
+head(all_hisat_counts)
+org_names <- names(all_hisat_counts)
+names(all_hisat_counts) <- c("parent_ERR1050076", "parent_ERR1050079", "parent_ERR1050073", "child_ERR1050078", "child_ERR1050081", "child_ERR1050075")
+
+
+sample_info <- data.frame(condition = gsub( "_ERR10500[0-9]+", "", names(all_hisat_counts)), row.names = names(all_hisat_counts))
+
+
+
+if (!requireNamespace("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+BiocManager::install("DESeq2", version = "3.8")
+
+data("mtcars")
+write.table(all_hisat_counts, file = "D:/RNAseq/test_out.txt", sep = "\t",
+            row.names = TRUE, col.names = NA)
+
+library(DESeq2)
+DESeq.ds <- DESeqDataSetFromMatrix(countData = all_hisat_counts, colData = sample_info, design = ~ condition)
+colData(DESeq.ds) %>% head
+assay(DESeq.ds) %>% head
+rowRanges(DESeq.ds) %>% head
+counts(DESeq.ds) %>% str
+DESeq.ds <- DESeq.ds [ rowSums(counts(DESeq.ds)) > 0, ]
+colSums(counts(DESeq.ds))
+str(colData(DESeq.ds)$condition)
+colData(DESeq.ds)$condition <- relevel(colData(DESeq.ds)$condition, "parent")
+str(colData(DESeq.ds)$condition)
+
+DESeq.ds <- DESeq(DESeq.ds)
+DGE.results <- results(DESeq.ds, independentFiltering = TRUE, alpha = 0.05)
+summary(DGE.results)
+
+
+
+
+
+hist(DGE.results$pvalue, col = "grey", border = "white", xlab = "", ylab = "", main = "freq of p-values")
+plotMA(DGE.results, alpha = 0.05, main = "parent vs. child", ylim = c(-5,5) )
+
+DESeq.ds <- estimateSizeFactors(DESeq.ds)
+sizeFactors(DESeq.ds)
+counts.sf_normalized <- counts(DESeq.ds, normalized = TRUE) 
+
+
+log.norm.counts <- log2(counts.sf_normalized + 1)
+
+par(mfrow=c(2,1))
+boxplot(counts.sf_normalized, notch = TRUE, main = "untransformed read counts", ylab = "readcounts")
+boxplot(log.norm.counts, notch = TRUE, main = "log2-transformed readcounts", ylab = "log2(read counts)")
